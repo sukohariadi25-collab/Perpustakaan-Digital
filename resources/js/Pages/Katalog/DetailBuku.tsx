@@ -31,6 +31,14 @@ interface Buku {
     kategori?: Kategori;
 }
 
+const getCoverUrl = (path?: string) => {
+    if (!path) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('/storage/')) return path;
+    if (path.startsWith('storage/')) return `/${path}`;
+    return `/storage/${path}`;
+};
+
 export default function DetailBuku({ buku }: { buku: Buku }) {
     const { auth } = usePage<any>().props;
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,13 +61,14 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
     };
 
     const stokTersedia = buku.stok ?? 0;
+    const sampulUrl = getCoverUrl(buku.sampul);
 
     return (
         <SiswaLayout>
             <Head title={`Detail Buku - ${buku.judul}`} />
 
-            <div className="space-y-6">
-                {/* Tombol Kembali */}
+            <div className="space-y-4 sm:space-y-6">
+                {/* Navigasi Kembali */}
                 <div>
                     <Link
                         href="/"
@@ -69,15 +78,19 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                     </Link>
                 </div>
 
-                {/* Card Detail Utama */}
-                <div className="bg-white dark:bg-[#111622] rounded-2xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 grid md:grid-cols-12 gap-8 shadow-sm">
-                    {/* Sampul Buku */}
-                    <div className="md:col-span-4 h-80 sm:h-96 bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-200/80 dark:border-slate-800 relative">
-                        {buku.sampul ? (
+                {/* Card Container Utama (1 Kolom di Mobile, 12 Grid di Tablet/Desktop) */}
+                <div className="bg-white dark:bg-[#111622] rounded-2xl p-4 sm:p-6 md:p-8 border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 shadow-sm">
+                    {/* Gambar Sampul (Rasio 3:4 dengan Batas Maksimal di Layar Kecil) */}
+                    <div className="md:col-span-4 aspect-[3/4] w-full max-w-[220px] sm:max-w-xs md:max-w-none mx-auto bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-200/80 dark:border-slate-800 relative shadow-sm">
+                        {sampulUrl ? (
                             <img
-                                src={`/storage/${buku.sampul}`}
+                                src={sampulUrl}
                                 alt={buku.judul}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.src = 'https://placehold.co/400x600/1e293b/ffffff?text=Sampul+Tidak+Ada';
+                                }}
                             />
                         ) : (
                             <div className="text-center p-4 space-y-2">
@@ -87,48 +100,48 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                         )}
                     </div>
 
-                    {/* Informasi Buku */}
-                    <div className="md:col-span-8 flex flex-col justify-between space-y-6">
-                        <div className="space-y-4">
+                    {/* Detail Informasi */}
+                    <div className="md:col-span-8 flex flex-col justify-between space-y-5 sm:space-y-6">
+                        <div className="space-y-3 sm:space-y-4">
                             {buku.kategori && (
                                 <span className="inline-block px-3 py-1 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-full border border-indigo-200/50 dark:border-indigo-800/50">
                                     {buku.kategori.nama}
                                 </span>
                             )}
-                            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">
                                 {buku.judul}
                             </h1>
 
-                            {/* Metadata Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl text-xs border border-slate-200/60 dark:border-slate-800">
-                                <div className="space-y-1">
-                                    <p className="text-slate-400 flex items-center gap-1">
-                                        <User className="w-3.5 h-3.5" /> Penulis
+                            {/* Metadata Grid (2 Kolom di HP, 4 Kolom di Desktop) */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 bg-slate-50 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-xl text-xs border border-slate-200/60 dark:border-slate-800">
+                                <div className="space-y-0.5">
+                                    <p className="text-slate-400 flex items-center gap-1 text-[11px]">
+                                        <User className="w-3 h-3" /> Penulis
                                     </p>
                                     <p className="font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{buku.penulis}</p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-slate-400 flex items-center gap-1">
-                                        <Building className="w-3.5 h-3.5" /> Penerbit
+                                <div className="space-y-0.5">
+                                    <p className="text-slate-400 flex items-center gap-1 text-[11px]">
+                                        <Building className="w-3 h-3" /> Penerbit
                                     </p>
                                     <p className="font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{buku.penerbit || '-'}</p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-slate-400 flex items-center gap-1">
-                                        <Calendar className="w-3.5 h-3.5" /> Tahun
+                                <div className="space-y-0.5">
+                                    <p className="text-slate-400 flex items-center gap-1 text-[11px]">
+                                        <Calendar className="w-3 h-3" /> Tahun
                                     </p>
                                     <p className="font-bold text-slate-800 dark:text-slate-200">{buku.tahun_terbit || '-'}</p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-slate-400 flex items-center gap-1">
-                                        <Hash className="w-3.5 h-3.5" /> ISBN
+                                <div className="space-y-0.5">
+                                    <p className="text-slate-400 flex items-center gap-1 text-[11px]">
+                                        <Hash className="w-3 h-3" /> ISBN
                                     </p>
-                                    <p className="font-mono font-bold text-slate-800 dark:text-slate-200">{buku.isbn || '-'}</p>
+                                    <p className="font-mono font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{buku.isbn || '-'}</p>
                                 </div>
                             </div>
 
                             {/* Deskripsi */}
-                            <div className="space-y-2 pt-2">
+                            <div className="space-y-1.5 pt-1">
                                 <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                                     Deskripsi / Sinopsis
                                 </h3>
@@ -138,8 +151,8 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                             </div>
                         </div>
 
-                        {/* Panel Reservasi Footer */}
-                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        {/* Footer Reservasi */}
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                             <div>
                                 <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
                                     Ketersediaan Stok
@@ -159,7 +172,7 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                                 <button
                                     onClick={() => setIsModalOpen(true)}
                                     disabled={stokTersedia === 0}
-                                    className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:scale-95"
                                 >
                                     <Bookmark className="w-4 h-4" /> Reservasi Buku Ini
                                 </button>
@@ -169,26 +182,26 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                 </div>
             </div>
 
-            {/* Modal Form Pemesanan / Reservasi */}
+            {/* Modal Reservasi Buku (Aman & Responsif di Layar HP Pendek) */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-[#111622] rounded-2xl p-6 w-full max-w-md shadow-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+                    <div className="bg-white dark:bg-[#111622] rounded-2xl p-5 sm:p-6 w-full max-w-md my-auto shadow-xl border border-slate-200/80 dark:border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <Bookmark className="w-4 h-4 text-indigo-500" />
+                            <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <Bookmark className="w-4 h-4 text-teal-500" />
                                 Form Reservasi Buku
                             </h2>
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
                             >
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmitPesan} className="space-y-4">
+                        <form onSubmit={handleSubmitPesan} className="space-y-3.5">
                             <div>
-                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                                     Nama Lengkap
                                 </label>
                                 <input
@@ -197,7 +210,7 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                                     value={data.nama_pemesan}
                                     onChange={(e) => setData('nama_pemesan', e.target.value)}
                                     placeholder="Masukkan nama lengkap"
-                                    className="w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none py-2 px-3"
+                                    className="w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none py-2.5 px-3"
                                 />
                                 {errors.nama_pemesan && (
                                     <p className="text-[11px] text-rose-500 mt-1">{errors.nama_pemesan}</p>
@@ -205,7 +218,7 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                                     Kelas
                                 </label>
                                 <input
@@ -214,7 +227,7 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                                     value={data.kelas_pemesan}
                                     onChange={(e) => setData('kelas_pemesan', e.target.value)}
                                     placeholder="Contoh: XI IPA 1"
-                                    className="w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none py-2 px-3"
+                                    className="w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none py-2.5 px-3"
                                 />
                                 {errors.kelas_pemesan && (
                                     <p className="text-[11px] text-rose-500 mt-1">{errors.kelas_pemesan}</p>
@@ -222,14 +235,14 @@ export default function DetailBuku({ buku }: { buku: Buku }) {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                                     Catatan (Opsional)
                                 </label>
                                 <textarea
                                     value={data.catatan}
                                     onChange={(e) => setData('catatan', e.target.value)}
-                                    placeholder="Contoh: Diambil saat jam istirahat kedua"
-                                    className="w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none py-2 px-3"
+                                    placeholder="Contoh: Diambil jam istirahat pertama"
+                                    className="w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none py-2.5 px-3"
                                     rows={2}
                                 />
                                 {errors.catatan && (

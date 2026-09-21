@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use App\Models\Pemesanan;
 use App\Models\Peminjaman;
 use App\Models\Buku;
+use App\Notifications\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +14,6 @@ class PemesananController extends Controller
 {
     public function index()
     {
-        // Otomatis ubah status jadi 'expired' jika melewati 24 jam & masih pending
         Pemesanan::where('status', 'pending')
             ->where('expired_at', '<', now())
             ->update(['status' => 'expired']);
@@ -42,46 +42,65 @@ class PemesananController extends Controller
     }
 
     public function store(Request $request)
-{
-    $request->validate([
-        'buku_id'       => 'required|exists:buku,id',
-        'nama_pemesan'  => 'required|string|max:255',
-        'kelas_pemesan' => 'required|string|max:100',
-        'catatan'       => 'nullable|string',
-    ]);
-
-    // Gunakan Database Transaction agar aman
-    DB::transaction(function () use ($request) {
-        $buku = Buku::lockForUpdate()->findOrFail($request->buku_id);
-
-        // Cek apakah stok benar-benar masih ada
-        if ($buku->stok <= 0) {
-            throw new \Exception('Maaf, stok buku ini sudah habis.');
-        }
-
-        // Kurangi stok buku sebanyak 1 unit
-        $buku->decrement('stok');
-
-        $kodePemesanan = 'PSN-' . strtoupper(substr(uniqid(), -6));
-
-        Pemesanan::create([
-            'user_id'       => auth()->id(),
-            'buku_id'       => $buku->id,
-            'kode_pemesanan'=> $kodePemesanan,
-            'nama_pemesan'  => $request->nama_pemesan,
-            'kelas_pemesan' => $request->kelas_pemesan,
-            'catatan'       => $request->catatan,
-            'status'        => 'pending',
-            'expired_at'    => now()->addDay(),
+    {
+        $request->validate([
+            'buku_id'       => 'required|exists:buku,id',
+            'nama_pemesan'  => 'required|string|max:255',
+            'kelas_pemesan' => 'required|string|max:100',
+            'catatan'       => 'nullable|string',
         ]);
-    });
 
-    return redirect()->route('siswa.pesanan.index')
-        ->with('success', 'Reservasi berhasil! Stok buku telah diperbarui.');
-}
+        try {
+            $pemesanan = null;
+
+            DB::transaction(function () use ($request, &$pemesanan) {
+                $buku = Buku::lockForUpdate()->findOrFail($request->buku_id);
+
+                if ($buku->stok <= 0) {
+                    throw new \Exception('Maaf, stok buku ini sudah habis.');
+                }
+
+                $buku->decrement('stok');
+
+                $kodePemesanan = 'PSN-' . strtoupper(substr(uniqid(), -6));
+
+                $pemesanan = Pemesanan::create([
+                    'user_id'       => auth()->id(),
+                    'buku_id'       => $buku->id,
+                    'kode_pemesanan'=> $kodePemesanan,
+                    'nama_pemesan'  => $request->nama_pemesan,
+                    'kelas_pemesan' => $request->kelas_pemesan,
+                    'catatan'       => $request->catatan,
+                    'status'        => 'pending',
+                    'expired_at'    => now()->addDay(),
+                ]);
+
+                $pemesanan->load('buku');
+            });
+
+            // Notifikasi ke Siswa yang memesan
+            auth()->user()?->notify(new AppNotification(
+                'Reservasi Berhasil',
+                "Reservasi buku '{$pemesanan->buku->judul}' berhasil dibuat (Kode: {$pemesanan->kode_pemesanan}). Silakan ambil di perpustakaan.",
+                '/siswa/pesanan',
+                'success'
+            ));
+
+            return redirect()->route('siswa.pesanan.index')
+                ->with('success', 'Reservasi berhasil! Stok buku telah diperbarui.')
+                ->with('reservasi', [
+                    'kode_pemesanan' => $pemesanan->kode_pemesanan,
+                    'judul_buku'     => $pemesanan->buku->judul ?? 'Buku Perpustakaan',
+                    'batas_ambil'    => $pemesanan->expired_at ? $pemesanan->expired_at->translatedFormat('d M Y, H:i') : '-',
+                ]);
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
     public function adminIndex()
     {
-        // Otomatis ubah status jadi 'expired' untuk sisi admin juga
         Pemesanan::where('status', 'pending')
             ->where('expired_at', '<', now())
             ->update(['status' => 'expired']);
@@ -111,18 +130,13 @@ class PemesananController extends Controller
 
     public function serahkanBuku($id)
     {
-        $pemesanan = Pemesanan::with('buku')->findOrFail($id);
+        $pemesanan = Pemesanan::with(['user', 'buku'])->findOrFail($id);
 
         if ($pemesanan->status !== 'pending') {
             return redirect()->back()->with('error', 'Pesanan ini sudah tidak dapat diproses.');
         }
 
-        if ($pemesanan->buku->stok <= 0) {
-            return redirect()->back()->with('error', 'Stok buku habis.');
-        }
-
         DB::transaction(function () use ($pemesanan) {
-            // 1. Buat data Peminjaman
             Peminjaman::create([
                 'user_id'         => $pemesanan->user_id,
                 'buku_id'         => $pemesanan->buku_id,
@@ -131,37 +145,49 @@ class PemesananController extends Controller
                 'status'          => 'dipinjam',
             ]);
 
-            // 2. Kurangi stok buku
-            $pemesanan->buku->decrement('stok');
-
-            // 3. Ubah status pemesanan
             $pemesanan->update(['status' => 'selesai']);
         });
+
+        // Notifikasi ke Siswa
+        if ($pemesanan->user) {
+            $pemesanan->user->notify(new AppNotification(
+                'Buku Telah Diserahkan',
+                "Buku '{$pemesanan->buku->judul}' telah diserahkan. Selamat membaca!",
+                '/peminjaman',
+                'success'
+            ));
+        }
 
         return redirect()->back()->with('success', 'Buku berhasil diserahkan dan peminjaman telah aktif!');
     }
 
     public function batalkanPesanan($id)
-{
-    DB::transaction(function () use ($id) {
-        $pemesanan = Pemesanan::findOrFail($id);
+    {
+        DB::transaction(function () use ($id) {
+            $pemesanan = Pemesanan::with(['user', 'buku'])->findOrFail($id);
 
-        if ($pemesanan->status !== 'pending') {
-            // Jika menggunakan pengecualian atau redirect, sesuaikan. 
-            // Untuk amannya, kita bisa return atau throw exception di dalam transaction.
-            throw new \Exception('Hanya pesanan pending yang bisa dibatalkan.');
-        }
+            if ($pemesanan->status !== 'pending') {
+                throw new \Exception('Hanya pesanan pending yang bisa dibatalkan.');
+            }
 
-        // 1. Kembalikan stok buku (+1) karena pesanan dibatalkan
-        $buku = Buku::find($pemesanan->buku_id);
-        if ($buku) {
-            $buku->increment('stok');
-        }
+            $buku = Buku::find($pemesanan->buku_id);
+            if ($buku) {
+                $buku->increment('stok');
+            }
 
-        // 2. Ubah status pesanan menjadi dibatalkan (atau langsung dihapus, sesuai kebutuhan)
-        $pemesanan->update(['status' => 'dibatalkan']);
-    });
+            $pemesanan->update(['status' => 'dibatalkan']);
 
-    return redirect()->back()->with('success', 'Pesanan berhasil dibatalkan dan stok dikembalikan.');
-}
+            // Notifikasi ke Pemesan
+            if ($pemesanan->user) {
+                $pemesanan->user->notify(new AppNotification(
+                    'Reservasi Dibatalkan',
+                    "Reservasi buku '{$pemesanan->buku->judul}' telah dibatalkan.",
+                    '/siswa/pesanan',
+                    'warning'
+                ));
+            }
+        });
+
+        return redirect()->back()->with('success', 'Pesanan berhasil dibatalkan dan stok dikembalikan.');
+    }
 }

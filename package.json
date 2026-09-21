@@ -27,6 +27,8 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "lucide-react": "^1.46.0"
+        "html5-qrcode": "^2.3.8",
+        "lucide-react": "^1.46.0",
+        "react-qr-code": "^2.2.0"
     }
 }

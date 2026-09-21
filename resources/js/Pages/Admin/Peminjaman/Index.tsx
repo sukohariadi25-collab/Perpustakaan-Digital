@@ -11,7 +11,7 @@ import {
     RotateCcw,
     X,
     Inbox,
-    FileDown, // <-- Tambahan icon untuk Export PDF
+    FileDown,
 } from 'lucide-react';
 
 interface IndexProps {
@@ -26,6 +26,8 @@ export default function Index({ peminjaman }: IndexProps) {
     const returnForm = useForm({
         kondisi_kembali: 'bagus',
         denda_kondisi: 0,
+        denda_keterlambatan: 0, // Ditambahkan agar data terkirim ke backend jika dibutuhkan
+        total_denda: 0,
     });
 
     // Mendukung data array langsung maupun paginated (.data)
@@ -56,15 +58,36 @@ export default function Index({ peminjaman }: IndexProps) {
         const tenggat = new Date(tenggatStr);
         const now = new Date();
 
+        // Validasi jika format tanggal tidak valid
+        if (isNaN(tenggat.getTime())) return 0;
+
         // Samakan jam ke 00:00 agar perhitungan selisih hari presisi
         tenggat.setHours(0, 0, 0, 0);
         now.setHours(0, 0, 0, 0);
 
         if (now <= tenggat) return 0;
 
-        const diffTime = Math.abs(now.getTime() - tenggat.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffTime = now.getTime() - tenggat.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
         return diffDays * 1000;
+    };
+
+    // Buka Modal & Set Transaksi Terpilih
+    const handleOpenReturnModal = (item: Peminjaman) => {
+        const lateFineCalculated = calculateLateFine(item);
+        setSelectedReturn(item);
+        returnForm.setData({
+            kondisi_kembali: 'bagus',
+            denda_kondisi: 0,
+            denda_keterlambatan: lateFineCalculated,
+            total_denda: lateFineCalculated,
+        });
+    };
+
+    // Tutup Modal & Reset Form
+    const handleCloseModal = () => {
+        setSelectedReturn(null);
+        returnForm.reset();
     };
 
     // Submit Pengembalian Buku
@@ -74,13 +97,12 @@ export default function Index({ peminjaman }: IndexProps) {
 
         returnForm.post(`/admin/peminjaman/${selectedReturn.id}/kembali`, {
             onSuccess: () => {
-                setSelectedReturn(null);
-                returnForm.reset();
+                handleCloseModal();
             },
         });
     };
 
-    // Handler untuk Export PDF (Mengirimkan tab aktif ke backend)
+    // Handler untuk Export PDF
     const handleExportPdf = () => {
         window.open(`/admin/peminjaman/export?tab=${activeTab}`, '_blank');
     };
@@ -106,7 +128,6 @@ export default function Index({ peminjaman }: IndexProps) {
 
                     {/* Tombol Aksi Header */}
                     <div className="flex items-center gap-2.5">
-                        {/* Tombol Export PDF */}
                         <button
                             type="button"
                             onClick={handleExportPdf}
@@ -115,7 +136,6 @@ export default function Index({ peminjaman }: IndexProps) {
                             <FileDown className="w-4 h-4" /> Export PDF
                         </button>
 
-                        {/* Tombol Transaksi Baru */}
                         <Link
                             href="/admin/peminjaman/transaksi"
                             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs rounded-xl transition-all shadow-sm"
@@ -221,7 +241,7 @@ export default function Index({ peminjaman }: IndexProps) {
                                                 <td className="p-4 text-center">
                                                     {['dipinjam', 'terlambat'].includes(statusLower) ? (
                                                         <button
-                                                            onClick={() => setSelectedReturn(item)}
+                                                            onClick={() => handleOpenReturnModal(item)}
                                                             className="inline-flex items-center gap-1 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg text-[11px] transition-colors shadow-sm"
                                                         >
                                                             <RotateCcw className="w-3.5 h-3.5" /> Proses Kembali
@@ -261,7 +281,7 @@ export default function Index({ peminjaman }: IndexProps) {
                                 Proses Pengembalian Buku
                             </h3>
                             <button
-                                onClick={() => setSelectedReturn(null)}
+                                onClick={handleCloseModal}
                                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                             >
                                 <X className="w-4 h-4" />
@@ -293,7 +313,14 @@ export default function Index({ peminjaman }: IndexProps) {
                                         type="number"
                                         min="0"
                                         value={returnForm.data.denda_kondisi}
-                                        onChange={(e) => returnForm.setData('denda_kondisi', Number(e.target.value))}
+                                        onChange={(e) => {
+                                            const val = Number(e.target.value);
+                                            returnForm.setData({
+                                                ...returnForm.data,
+                                                denda_kondisi: val,
+                                                total_denda: lateFine + val,
+                                            });
+                                        }}
                                         className="w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none py-2 px-3"
                                         placeholder="0"
                                     />
@@ -323,7 +350,7 @@ export default function Index({ peminjaman }: IndexProps) {
                             <div className="flex justify-end gap-2 pt-2">
                                 <button
                                     type="button"
-                                    onClick={() => setSelectedReturn(null)}
+                                    onClick={handleCloseModal}
                                     className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                                 >
                                     Batal

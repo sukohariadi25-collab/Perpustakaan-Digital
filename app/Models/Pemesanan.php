@@ -15,7 +15,12 @@ class Pemesanan extends Model
         'nama_pemesan',
         'kelas_pemesan',
         'catatan',
-        'status',];
+        'status',
+        'expired_at'];
+
+    protected $casts = [
+        'expired_at' => 'datetime',
+    ];
 
     public function user(): BelongsTo
     {

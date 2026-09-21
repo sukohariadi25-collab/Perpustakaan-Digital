@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Buku;
 use App\Models\Kategori;
 use App\Models\SalinanBuku;
+use App\Notifications\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AdminBukuController extends Controller
 {
@@ -40,7 +43,7 @@ class AdminBukuController extends Controller
             'penulis'        => 'required|string|max:255',
             'penerbit'       => 'required|string|max:255',
             'tahun_terbit'   => 'required|integer|digits:4',
-            'sampul'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'sampul'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'jumlah_salinan' => 'required|integer|min:1',
         ]);
 
@@ -50,7 +53,6 @@ class AdminBukuController extends Controller
 
         $buku = Buku::create($validated);
 
-        // Generasi barcode salinan buku otomatis
         for ($i = 1; $i <= $request->jumlah_salinan; $i++) {
             SalinanBuku::create([
                 'buku_id'      => $buku->id,
@@ -58,6 +60,14 @@ class AdminBukuController extends Controller
                 'status'       => 'tersedia',
             ]);
         }
+
+        // Notifikasi ke Admin yang menambah buku
+        auth()->user()?->notify(new AppNotification(
+            'Buku Berhasil Ditambahkan',
+            "Buku '{$buku->judul}' dengan {$request->jumlah_salinan} salinan berhasil ditambahkan.",
+            '/admin/buku',
+            'success'
+        ));
 
         return redirect()->route('admin.buku.index')->with('success', 'Buku dan salinan barcode berhasil ditambahkan.');
     }
@@ -77,13 +87,31 @@ class AdminBukuController extends Controller
     {
         $buku = Buku::findOrFail($id);
 
-        $validated = $request->validate([
-            'judul'       => 'required|string|max:255',
-            'isbn'        => 'nullable|string|max:50',
-            'kategori_id' => 'required|exists:kategori,id',
-            'penulis'     => 'nullable|string|max:255',
-            'penerbit'    => 'nullable|string|max:255',
-        ]);
+        $rules = [
+            'kategori_id'    => 'required|exists:kategori,id',
+            'judul'          => 'required|string|max:255',
+            'isbn'           => ['required', 'string', Rule::unique('buku', 'isbn')->ignore($buku->id)],
+            'penulis'        => 'required|string|max:255',
+            'penerbit'       => 'required|string|max:255',
+            'tahun_terbit'   => 'required|integer|digits:4',
+            'jumlah_salinan' => 'nullable|integer|min:1',
+        ];
+
+        if ($request->hasFile('sampul')) {
+            $rules['sampul'] = 'image|mimes:jpg,jpeg,png,webp|max:2048';
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($request->hasFile('sampul')) {
+            if ($buku->sampul && Storage::disk('public')->exists($buku->sampul)) {
+                Storage::disk('public')->delete($buku->sampul);
+            }
+
+            $validated['sampul'] = $request->file('sampul')->store('sampul-buku', 'public');
+        } else {
+            unset($validated['sampul']);
+        }
 
         $buku->update($validated);
 
@@ -93,6 +121,11 @@ class AdminBukuController extends Controller
     public function destroy($id)
     {
         $buku = Buku::findOrFail($id);
+
+        if ($buku->sampul && Storage::disk('public')->exists($buku->sampul)) {
+            Storage::disk('public')->delete($buku->sampul);
+        }
+
         $buku->delete();
 
         return redirect()->route('admin.buku.index')->with('success', 'Buku berhasil dihapus.');
@@ -110,10 +143,8 @@ class AdminBukuController extends Controller
         return response()->stream(function () {
             $file = fopen('php://output', 'w');
             
-            // UTF-8 BOM untuk kompatibilitas Microsoft Excel
             fputs($file, "\xEF\xBB\xBF");
 
-            // Menggunakan pemisah titik koma (;) agar data otomatis terpisah menjadi tabel teratur
             fputcsv($file, ['ID', 'Judul Buku', 'ISBN', 'Penulis', 'Penerbit', 'Kategori', 'Stok'], ';');
 
             Buku::with('kategori')->chunk(100, function ($bukuList) use ($file) {
@@ -143,17 +174,14 @@ class AdminBukuController extends Controller
         $path = $request->file('file')->getRealPath();
         $file = fopen($path, 'r');
 
-        // Lewati BOM UTF-8 jika ada
         $bom = fread($file, 3);
         if ($bom !== "\xEF\xBB\xBF") {
             rewind($file);
         }
 
-        // Deteksi pemisah kolom otomatis (titik koma atau koma)
         $firstLine = fgets($file);
         $delimiter = (substr_count($firstLine, ';') >= substr_count($firstLine, ',')) ? ';' : ',';
 
-        // Reset pointer & lewati baris header
         rewind($file);
         if ($bom === "\xEF\xBB\xBF") {
             fread($file, 3);
@@ -180,6 +208,14 @@ class AdminBukuController extends Controller
 
         fclose($file);
 
+        // Notifikasi ke Admin
+        auth()->user()?->notify(new AppNotification(
+            'Import Data Buku Selesai',
+            'Data buku dari file CSV berhasil diimport ke sistem.',
+            '/admin/buku',
+            'info'
+        ));
+
         return redirect()->back()->with('success', 'Data buku berhasil diimport!');
     }
 
@@ -195,15 +231,65 @@ class AdminBukuController extends Controller
         return response()->stream(function () {
             $file = fopen('php://output', 'w');
             
-            // UTF-8 BOM
             fputs($file, "\xEF\xBB\xBF");
 
-            // Menggunakan pemisah titik koma (;)
             fputcsv($file, ['ID', 'Judul Buku', 'ISBN', 'Penulis', 'Penerbit', 'Kategori', 'Stok'], ';');
             fputcsv($file, ['', 'Laskar Pelangi', '978-979-3062-79-2', 'Andrea Hirata', 'Bentang Pustaka', 'Novel', 10], ';');
             fputcsv($file, ['', 'Bumi Manusia', '978-979-97312-3-4', 'Pramoedya Ananta Toer', 'Lentera Dipantara', 'Fiksi', 5], ';');
 
             fclose($file);
         }, 200, $headers);
+    }
+
+    public function bulkUploadSampul(Request $request)
+    {
+        $request->validate([
+            'sampul_files'   => 'required|array',
+            'sampul_files.*' => 'image|mimes:jpeg,png,jpg,webp|max:3072',
+        ]);
+
+        $berhasil = 0;
+        $gagal = 0;
+        $fileGagal = [];
+
+        foreach ($request->file('sampul_files') as $file) {
+            $namaFile = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+
+            $buku = Buku::where('isbn', $namaFile)
+                ->orWhere('id', $namaFile)
+                ->first();
+
+            if ($buku) {
+                if ($buku->sampul && Storage::disk('public')->exists($buku->sampul)) {
+                    Storage::disk('public')->delete($buku->sampul);
+                }
+
+                $path = $file->store('sampul-buku', 'public');
+
+                $buku->update([
+                    'sampul' => $path,
+                ]);
+
+                $berhasil++;
+            } else {
+                $gagal++;
+                $fileGagal[] = $file->getClientOriginalName();
+            }
+        }
+
+        $pesan = "Berhasil memperbarui {$berhasil} sampul buku.";
+        if ($gagal > 0) {
+            $pesan .= " {$gagal} file tidak ditemukan kecocokannya (" . implode(', ', $fileGagal) . ").";
+        }
+
+        // Notifikasi ke Admin
+        auth()->user()?->notify(new AppNotification(
+            'Upload Sampul Massal',
+            $pesan,
+            '/admin/buku',
+            $berhasil > 0 ? 'success' : 'warning'
+        ));
+
+        return redirect()->back()->with($berhasil > 0 ? 'success' : 'error', $pesan);
     }
 }
