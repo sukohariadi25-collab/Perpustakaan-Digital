@@ -62,15 +62,26 @@ class PeminjamanController extends Controller
             'status'          => 'dipinjam',
         ]);
 
-        // Notifikasi ke Peminjam
         $user = User::find($request->user_id);
         $buku = Buku::find($request->buku_id);
 
+        // 1. Notifikasi ke Siswa Peminjam
         if ($user && $buku) {
             $user->notify(new AppNotification(
                 'Peminjaman Baru Dibuat',
                 "Peminjaman buku '{$buku->judul}' berhasil dicatat. Tanggal kembali: {$peminjaman->tanggal_kembali}.",
                 '/peminjaman',
+                'info'
+            ));
+        }
+
+        // 2. Notifikasi ke Admin (Pengajuan Peminjaman Baru)
+        $admins = User::whereIn('role', ['admin', 'Admin', 'pustakawan'])->get();
+        foreach ($admins as $admin) {
+            $admin->notify(new AppNotification(
+                'Pengajuan Peminjaman Baru',
+                "Peminjaman buku '{$buku->judul}' telah dicatat untuk siswa {$user->name}.",
+                '/admin/peminjaman',
                 'info'
             ));
         }
@@ -94,7 +105,7 @@ class PeminjamanController extends Controller
             $this->kurangiStokBuku($peminjaman->buku_id);
         });
 
-        // Notifikasi ke Peminjam
+        // Notifikasi ke Siswa: Peminjaman Disetujui
         if ($peminjaman->user) {
             $peminjaman->user->notify(new AppNotification(
                 'Peminjaman Disetujui',
@@ -120,7 +131,7 @@ class PeminjamanController extends Controller
             $this->tambahStokBuku($peminjaman->buku_id);
         });
 
-        // Notifikasi ke Peminjam
+        // Notifikasi ke Siswa: Peminjaman Ditolak
         if ($peminjaman->user) {
             $peminjaman->user->notify(new AppNotification(
                 'Peminjaman Ditolak',
@@ -168,7 +179,7 @@ class PeminjamanController extends Controller
             }
         });
 
-        // Notifikasi ke Peminjam
+        // Notifikasi ke Siswa: Buku Berhasil Dikembalikan
         if ($peminjaman->user) {
             $pesanDenda = $totalDenda > 0 ? " Total denda: Rp " . number_format($totalDenda, 0, ',', '.') : '';
             $peminjaman->user->notify(new AppNotification(
@@ -215,7 +226,7 @@ class PeminjamanController extends Controller
                 Pemesanan::where('id', $pemesanan->id)->update(['status' => 'SELESAI']);
             });
 
-            // Notifikasi ke Pemesan saat scan berhasil
+            // Notifikasi ke Siswa saat scan berhasil
             if ($pemesanan->user) {
                 $pemesanan->user->notify(new AppNotification(
                     'Buku Diserahkan (Scan)',

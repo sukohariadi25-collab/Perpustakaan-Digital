@@ -40,7 +40,6 @@ export default function NotificationBell() {
 
     // Menutup dropdown saat klik di luar elemen
     useEffect(() => {
-
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
@@ -51,15 +50,13 @@ export default function NotificationBell() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Handling Klik Satu Notifikasi
+    // Handling Klik Satu Notifikasi: Tandai Dibaca & Langsung Pindah ke Halaman Riwayat
     const handleItemClick = (item: NotificationItem) => {
         router.post(`/notifications/${item.id}/mark-as-read`, {}, {
             preserveScroll: true,
             onSuccess: () => {
                 setIsOpen(false);
-                if (item.data.url && item.data.url !== '#') {
-                    router.visit(item.data.url);
-                }
+                router.visit('/notifications');
             }
         });
     };
@@ -145,14 +142,14 @@ export default function NotificationBell() {
                                     onClick={() => handleItemClick(item)}
                                     className="p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors flex items-start gap-3 group"
                                 >
-                                    {renderIcon(item.data.type)}
+                                    {renderIcon(item.data?.type)}
 
                                     <div className="flex-1 min-w-0 space-y-0.5">
                                         <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors truncate">
-                                            {item.data.title}
+                                            {item.data?.title ?? 'Pemberitahuan'}
                                         </p>
                                         <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
-                                            {item.data.message}
+                                            {item.data?.message ?? ''}
                                         </p>
                                         <span className="text-[10px] text-slate-400 dark:text-slate-500 block pt-1">
                                             {formatTime(item.created_at)}

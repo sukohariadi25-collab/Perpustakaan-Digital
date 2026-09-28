@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Buku;
 use App\Models\Kategori;
 use App\Models\SalinanBuku;
+use App\Models\User;
 use App\Notifications\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -61,7 +62,7 @@ class AdminBukuController extends Controller
             ]);
         }
 
-        // Notifikasi ke Admin yang menambah buku
+        // Notifikasi ke Admin
         auth()->user()?->notify(new AppNotification(
             'Buku Berhasil Ditambahkan',
             "Buku '{$buku->judul}' dengan {$request->jumlah_salinan} salinan berhasil ditambahkan.",

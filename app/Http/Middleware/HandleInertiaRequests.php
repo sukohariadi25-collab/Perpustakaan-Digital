@@ -15,25 +15,31 @@ class HandleInertiaRequests extends Middleware
     }
 
     public function share(Request $request): array
-{
-    $user = $request->user();
+    {
+        $user = $request->user();
 
-    return array_merge(parent::share($request), [
-        'auth' => [
-            'user' => $user ? array_merge($user->toArray(), [
-                'notifications' => $user->unreadNotifications()->take(10)->get()->map(function ($n) {
+        return array_merge(parent::share($request), [
+            'auth' => [
+                'user' => $user,
+                // Format agar pas dengan interface NotificationItem di NotificationBell.tsx
+                'unreadNotifications' => $user ? $user->unreadNotifications()->take(10)->get()->map(function ($n) {
                     return [
-                        'id' => $n->id,
-                        'title' => $n->data['title'] ?? 'Pemberitahuan',
-                        'message' => $n->data['message'] ?? '',
-                        'url' => $n->data['url'] ?? '#',
-                        'type' => $n->data['type'] ?? 'info',
-                        'created_at' => $n->created_at->diffForHumans(),
+                        'id'         => $n->id,
+                        'read_at'    => $n->read_at,
+                        'data'       => [
+                            'title'   => $n->data['title'] ?? 'Pemberitahuan',
+                            'message' => $n->data['message'] ?? '',
+                            'url'     => $n->data['url'] ?? '#',
+                            'type'    => $n->data['type'] ?? 'info',
+                        ],
+                        'created_at' => $n->created_at->toISOString(),
                     ];
-                }),
-                'unread_notifications_count' => $user->unreadNotifications()->count(),
-            ]) : null,
-        ],
-    ]);
-}
+                }) : [],
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error'   => fn () => $request->session()->get('error'),
+            ],
+        ]);
+    }
 }

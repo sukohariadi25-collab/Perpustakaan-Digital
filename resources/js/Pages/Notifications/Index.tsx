@@ -1,6 +1,9 @@
 import React from 'react';
-import { Link, router, Head } from '@inertiajs/react';
-import { Bell, Trash2, CheckCheck, Info, CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Link, router, Head, usePage } from '@inertiajs/react';
+import { Bell, Trash2, CheckCheck, Info, CheckCircle2, AlertTriangle, AlertCircle, ArrowLeft } from 'lucide-react';
+import AdminLayout from '@/Layouts/AdminLayout';
+import SiswaLayout from '@/Layouts/SiswaLayout';
+import type { Pengguna } from '@/types/perpustakaan';
 
 interface NotificationData {
     title: string;
@@ -30,6 +33,18 @@ interface Props {
 }
 
 export default function NotificationsIndex({ notifications }: Props) {
+    // Ambil data user yang sedang login dari Inertia Page Props
+    const { auth } = usePage<{ auth: { user: Pengguna } }>().props;
+
+    // Aksi Navigasi Kembali
+    const handleBack = () => {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            router.visit(auth?.user?.role === 'admin' ? '/admin/dashboard' : '/siswa/dashboard');
+        }
+    };
+
     // Handling Klik Notifikasi
     const handleItemClick = (item: NotificationItem) => {
         if (!item.read_at) {
@@ -84,29 +99,42 @@ export default function NotificationsIndex({ notifications }: Props) {
         }
     };
 
+    // Penentuan Layout Secara Dinamis Berdasarkan Role
+    const Layout = auth?.user?.role === 'admin' ? AdminLayout : SiswaLayout;
+
     return (
-        <>
+        <Layout>
             <Head title="Riwayat Notifikasi" />
 
             <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-                {/* Header Halaman */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <Bell className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-                            Riwayat Notifikasi
-                        </h1>
-                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            Kelola seluruh pemberitahuan aktivitas akun Anda.
-                        </p>
-                    </div>
-
+                {/* Tombol Kembali & Header Halaman */}
+                <div className="space-y-4">
                     <button
-                        onClick={markAllAsRead}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-900/50 rounded-xl transition-colors self-start sm:self-auto"
+                        onClick={handleBack}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 rounded-xl transition-all w-fit"
                     >
-                        <CheckCheck className="w-4 h-4" /> Tandai Semua Dibaca
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Kembali</span>
                     </button>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <Bell className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                                Riwayat Notifikasi
+                            </h1>
+                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                Kelola seluruh pemberitahuan aktivitas akun Anda.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={markAllAsRead}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-900/50 rounded-xl transition-colors self-start sm:self-auto"
+                        >
+                            <CheckCheck className="w-4 h-4" /> Tandai Semua Dibaca
+                        </button>
+                    </div>
                 </div>
 
                 {/* Container List Notifikasi */}
@@ -191,6 +219,6 @@ export default function NotificationsIndex({ notifications }: Props) {
                     </div>
                 )}
             </div>
-        </>
+        </Layout>
     );
 }

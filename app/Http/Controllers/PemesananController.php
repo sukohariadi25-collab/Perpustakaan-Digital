@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use App\Models\Pemesanan;
 use App\Models\Peminjaman;
 use App\Models\Buku;
+use App\Models\User;
 use App\Notifications\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -78,13 +79,24 @@ class PemesananController extends Controller
                 $pemesanan->load('buku');
             });
 
-            // Notifikasi ke Siswa yang memesan
+            // 1. Notifikasi ke SISWA yang memesan
             auth()->user()?->notify(new AppNotification(
                 'Reservasi Berhasil',
                 "Reservasi buku '{$pemesanan->buku->judul}' berhasil dibuat (Kode: {$pemesanan->kode_pemesanan}). Silakan ambil di perpustakaan.",
                 '/siswa/pesanan',
                 'success'
             ));
+
+            // 2. Notifikasi ke SELURUH ADMIN (Pesanan Baru Masuk)
+            $admins = User::whereIn('role', ['admin', 'Admin', 'pustakawan'])->get();
+            foreach ($admins as $admin) {
+                $admin->notify(new AppNotification(
+                    'Pesanan Baru Masuk',
+                    "Siswa {$pemesanan->nama_pemesan} ({$pemesanan->kelas_pemesan}) membuat pesanan buku '{$pemesanan->buku->judul}'.",
+                    '/admin/pemesanan',
+                    'info'
+                ));
+            }
 
             return redirect()->route('siswa.pesanan.index')
                 ->with('success', 'Reservasi berhasil! Stok buku telah diperbarui.')
@@ -148,7 +160,7 @@ class PemesananController extends Controller
             $pemesanan->update(['status' => 'selesai']);
         });
 
-        // Notifikasi ke Siswa
+        // Notifikasi ke Siswa: Pesanan Siap Diambil / Buku Diserahkan
         if ($pemesanan->user) {
             $pemesanan->user->notify(new AppNotification(
                 'Buku Telah Diserahkan',
@@ -163,7 +175,9 @@ class PemesananController extends Controller
 
     public function batalkanPesanan($id)
     {
-        DB::transaction(function () use ($id) {
+        $isUserSiswa = auth()->user() && auth()->user()->role === 'siswa';
+
+        DB::transaction(function () use ($id, $isUserSiswa) {
             $pemesanan = Pemesanan::with(['user', 'buku'])->findOrFail($id);
 
             if ($pemesanan->status !== 'pending') {
@@ -177,7 +191,7 @@ class PemesananController extends Controller
 
             $pemesanan->update(['status' => 'dibatalkan']);
 
-            // Notifikasi ke Pemesan
+            // 1. Notifikasi ke Siswa Pemesan
             if ($pemesanan->user) {
                 $pemesanan->user->notify(new AppNotification(
                     'Reservasi Dibatalkan',
@@ -185,6 +199,19 @@ class PemesananController extends Controller
                     '/siswa/pesanan',
                     'warning'
                 ));
+            }
+
+            // 2. Jika pembatalan dilakukan oleh Siswa, kirim Notifikasi ke Admin
+            if ($isUserSiswa) {
+                $admins = User::whereIn('role', ['admin', 'Admin', 'pustakawan'])->get();
+                foreach ($admins as $admin) {
+                    $admin->notify(new AppNotification(
+                        'Pembatalan Pesanan oleh Siswa',
+                        "Siswa {$pemesanan->nama_pemesan} membatalkan pesanan buku '{$pemesanan->buku->judul}'.",
+                        '/admin/pemesanan',
+                        'warning'
+                    ));
+                }
             }
         });
 
