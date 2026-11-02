@@ -1,8 +1,8 @@
-import React, { FormEventHandler } from 'react';
+import React, { useState, useEffect, FormEventHandler } from 'react';
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Sparkles, Mail, Lock, LogIn, BookOpen } from 'lucide-react';
+import { Mail, Lock, LogIn, BookOpen, Sun, Moon } from 'lucide-react';
 
 export default function Login({
     status,
@@ -17,6 +17,29 @@ export default function Login({
         remember: false as boolean,
     });
 
+    // State untuk mendeteksi apakah mode gelap aktif
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    useEffect(() => {
+        // Cek apakah class 'dark' sudah ada di elemen html saat pertama kali muat
+        if (document.documentElement.classList.contains('dark')) {
+            setIsDarkMode(true);
+        }
+    }, []);
+
+    // Fungsi untuk mengubah tema saat tombol diklik
+    const toggleTheme = () => {
+        if (isDarkMode) {
+            document.documentElement.classList.remove('dark');
+            setIsDarkMode(false);
+            localStorage.setItem('theme', 'light');
+        } else {
+            document.documentElement.classList.add('dark');
+            setIsDarkMode(true);
+            localStorage.setItem('theme', 'dark');
+        }
+    };
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         post(route('login'), {
@@ -25,8 +48,18 @@ export default function Login({
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden transition-colors duration-300">
             <Head title="Masuk - AksaraNet" />
+
+            {/* Tombol Toggle Theme di Pojok Kanan Atas */}
+            <button
+                type="button"
+                onClick={toggleTheme}
+                className="absolute top-6 right-6 p-2.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-md hover:scale-105 transition-all"
+                title="Ganti Tema"
+            >
+                {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </button>
 
             {/* Background Glow Effects */}
             <div className="absolute top-1/4 -left-20 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -39,30 +72,30 @@ export default function Login({
                         <div className="p-2.5 bg-gradient-to-tr from-teal-600 to-emerald-400 rounded-2xl shadow-lg shadow-teal-500/20 text-white">
                             <BookOpen className="w-6 h-6" />
                         </div>
-                        <span className="text-2xl font-black tracking-tight text-white">
-                            Aksara<span className="text-teal-400">Net</span>
+                        <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                            Aksara<span className="text-teal-600 dark:text-teal-400">Net</span>
                         </span>
                     </Link>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                         Masuk ke akun perpustakaan digital milikmu
                     </p>
                 </div>
 
                 {/* Card Form */}
-                <div className="bg-[#111622] rounded-3xl p-6 sm:p-8 border border-slate-800/80 shadow-2xl space-y-5">
+                <div className="bg-white dark:bg-[#111622] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-2xl space-y-5 transition-colors duration-300">
                     {status && (
-                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-semibold">
+                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
                             {status}
                         </div>
                     )}
 
                     <form onSubmit={submit} className="space-y-4">
                         <div>
-                            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                                 Alamat Email
                             </label>
                             <div className="relative">
-                                <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                                <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                                 <input
                                     id="email"
                                     type="email"
@@ -72,28 +105,28 @@ export default function Login({
                                     required
                                     placeholder="nama@sekolah.sch.id"
                                     onChange={(e) => setData('email', e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-slate-900/90 border border-slate-800 text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none"
+                                    className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none"
                                 />
                             </div>
-                            <InputError message={errors.email} className="mt-1.5 text-xs text-rose-400" />
+                            <InputError message={errors.email} className="mt-1.5 text-xs text-rose-500 dark:text-rose-400" />
                         </div>
 
                         <div>
                             <div className="flex justify-between items-center mb-1.5">
-                                <label className="block text-xs font-semibold text-slate-300">
+                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                                     Kata Sandi
                                 </label>
                                 {canResetPassword && (
                                     <Link
                                         href={route('password.request')}
-                                        className="text-[11px] font-semibold text-teal-400 hover:underline"
+                                        className="text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:underline"
                                     >
                                         Lupa sandi?
                                     </Link>
                                 )}
                             </div>
                             <div className="relative">
-                                <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                                <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                                 <input
                                     id="password"
                                     type="password"
@@ -103,10 +136,10 @@ export default function Login({
                                     required
                                     placeholder="••••••••"
                                     onChange={(e) => setData('password', e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-slate-900/90 border border-slate-800 text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none"
+                                    className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none"
                                 />
                             </div>
-                            <InputError message={errors.password} className="mt-1.5 text-xs text-rose-400" />
+                            <InputError message={errors.password} className="mt-1.5 text-xs text-rose-500 dark:text-rose-400" />
                         </div>
 
                         <div className="flex items-center">
@@ -115,9 +148,9 @@ export default function Login({
                                     name="remember"
                                     checked={data.remember}
                                     onChange={(e) => setData('remember', (e.target.checked || false) as false)}
-                                    className="rounded bg-slate-900 border-slate-800 text-teal-600 focus:ring-teal-500/20"
+                                    className="rounded bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-teal-600 focus:ring-teal-500/20"
                                 />
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-slate-600 dark:text-slate-400">
                                     Ingat saya di perangkat ini
                                 </span>
                             </label>
@@ -132,10 +165,10 @@ export default function Login({
                         </button>
                     </form>
 
-                    <div className="pt-2 text-center border-t border-slate-800/80">
-                        <p className="text-xs text-slate-400">
+                    <div className="pt-2 text-center border-t border-slate-100 dark:border-slate-800/80">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                             Belum punya akun?{' '}
-                            <Link href={route('register')} className="font-bold text-teal-400 hover:underline">
+                            <Link href={route('register')} className="font-bold text-teal-600 dark:text-teal-400 hover:underline">
                                 Daftar Sekarang
                             </Link>
                         </p>

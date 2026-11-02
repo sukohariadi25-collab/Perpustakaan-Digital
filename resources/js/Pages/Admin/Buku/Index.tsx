@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, router, useForm, Head } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import BulkUploadSampulModal from '@/Components/BulkUploadSampulModal';
 import { Buku } from '@/types/perpustakaan';
-import { Upload, Download, Plus, Edit, Trash2, X, BookOpen, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
+import { Upload, Download, Plus, Edit, Trash2, X, BookOpen, FileSpreadsheet, Image as ImageIcon, ChevronDown } from 'lucide-react';
 
 interface PaginationLink {
     url: string | null;
@@ -29,6 +29,20 @@ export default function Index({ buku }: IndexProps) {
 
     const [isModalImportOpen, setIsModalImportOpen] = useState(false);
     const [isModalBulkSampulOpen, setIsModalBulkSampulOpen] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Menutup dropdown ketika mengklik di luar area dropdown
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const { setData, post, processing, errors, reset } = useForm({
         file: null as File | null,
@@ -66,34 +80,63 @@ export default function Index({ buku }: IndexProps) {
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5">
-                        <button
-                            onClick={() => setIsModalBulkSampulOpen(true)}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 font-semibold text-xs rounded-xl border border-indigo-500/30 transition-all"
-                        >
-                            <ImageIcon className="w-3.5 h-3.5" />
-                            Import Sampul Massal
-                        </button>
-                        <button
-                            onClick={() => setIsModalImportOpen(true)}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-semibold text-xs rounded-xl border border-emerald-500/30 transition-all"
-                        >
-                            <Upload className="w-3.5 h-3.5" />
-                            Import CSV
-                        </button>
-                        <a
-                            href={route('admin.buku.export')}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-xs rounded-xl border border-slate-200/80 dark:border-slate-700 transition-all"
-                        >
-                            <Download className="w-3.5 h-3.5" />
-                            Export CSV
-                        </a>
+                    <div className="flex items-center gap-2.5">
+                        {/* Tombol Dropdown Aksi Data */}
+                        <div className="relative" ref={dropdownRef}>
+                            <button
+                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                className="inline-flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-[#111622] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-xs rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all"
+                            >
+                                <FileSpreadsheet className="w-3.5 h-3.5 text-teal-500" />
+                                <span>Opsi Data & Berkas</span>
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isDropdownOpen && (
+                                <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-[#111622] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-1.5 z-50 divide-y divide-slate-100 dark:divide-slate-800">
+                                    <div className="px-1 py-1 space-y-0.5">
+                                        <button
+                                            onClick={() => {
+                                                setIsModalBulkSampulOpen(true);
+                                                setIsDropdownOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-teal-500/10 hover:text-teal-600 dark:hover:text-teal-400 rounded-xl transition-colors text-left"
+                                        >
+                                            <ImageIcon className="w-4 h-4 text-indigo-500" />
+                                            <span>Import Sampul Massal</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsModalImportOpen(true);
+                                                setIsDropdownOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-teal-500/10 hover:text-teal-600 dark:hover:text-teal-400 rounded-xl transition-colors text-left"
+                                        >
+                                            <Upload className="w-4 h-4 text-emerald-500" />
+                                            <span>Import Data CSV</span>
+                                        </button>
+                                    </div>
+                                    <div className="px-1 py-1">
+                                        <a
+                                            href={route('admin.buku.export')}
+                                            onClick={() => setIsDropdownOpen(false)}
+                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-teal-500/10 hover:text-teal-600 dark:hover:text-teal-400 rounded-xl transition-colors text-left"
+                                        >
+                                            <Download className="w-4 h-4 text-amber-500" />
+                                            <span>Export Data CSV</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Tombol Tambah Buku */}
                         <Link
                             href={route('admin.buku.create')}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl shadow-sm transition-all"
                         >
                             <Plus className="w-4 h-4" />
-                            Tambah Buku
+                            <span>Tambah Buku</span>
                         </Link>
                     </div>
                 </div>

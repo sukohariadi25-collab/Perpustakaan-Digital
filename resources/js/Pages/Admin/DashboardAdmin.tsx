@@ -8,10 +8,10 @@ import {
     Clock,
     AlertTriangle,
     DollarSign,
-    Plus,
     ArrowRight,
     BookPlus,
     Layers,
+    Sparkles,
 } from 'lucide-react';
 
 interface PeminjamanItem {
@@ -123,40 +123,50 @@ export default function Dashboard({ stats, peminjamanTerbaru }: DashboardProps) 
         <AdminLayout>
             <Head title="Admin Dashboard" />
 
-            <div className="space-y-8">
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Ringkasan Perpustakaan</h1>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Pantau aktivitas, statistik, dan transaksi peminjaman terbaru.
-                    </p>
+            <div className="space-y-6 sm:space-y-8">
+                {/* Banner Hero Khusus Admin (Mendukung Light & Dark Mode) */}
+                <div className="relative overflow-hidden bg-gradient-to-r from-teal-500 via-teal-600 to-emerald-600 dark:from-slate-900 dark:via-teal-950 dark:to-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white shadow-lg">
+                    <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-teal-500/15 dark:bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="relative z-10 space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-500/30 text-teal-200 dark:text-teal-300 text-[11px] font-semibold">
+                            <Sparkles className="w-3.5 h-3.5" /> Portal Pustakawan AksaraNet
+                        </div>
+                        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                            Dashboard Administrator 📚
+                        </h1>
+                        <p className="text-xs sm:text-sm text-slate-200 dark:text-slate-300 max-w-xl leading-relaxed">
+                            Kelola koleksi perpustakaan, pantau sirkulasi peminjaman buku siswa, dan validasi antrean pesanan dengan mudah dalam satu kendali.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Grid Statistik */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {/* Grid Statistik (Diubah jadi 2 kolom di mobile, tetap responsif di tablet/desktop) */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
                     {statCards.map((card, idx) => {
                         const IconComponent = card.icon;
                         return (
                             <div
                                 key={idx}
-                                className="bg-white dark:bg-[#111622] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between hover:border-teal-500/40 transition-all duration-200"
+                                className="bg-white dark:bg-[#111622] p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between hover:border-teal-500/40 transition-all duration-200"
                             >
-                                <div className="space-y-1">
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                                    <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
                                         {card.title}
                                     </p>
-                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+                                    <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white truncate">
                                         {card.value}{' '}
                                         {card.unit && (
-                                            <span className="text-xs font-normal text-slate-400">
+                                            <span className="text-[10px] sm:text-xs font-normal text-slate-400">
                                                 {card.unit}
                                             </span>
                                         )}
                                     </h3>
                                 </div>
                                 <div
-                                    className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${card.color}`}
+                                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border flex items-center justify-center shrink-0 ${card.color}`}
                                 >
-                                    <IconComponent className="w-5 h-5" />
+                                    <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
                                 </div>
                             </div>
                         );
@@ -166,7 +176,7 @@ export default function Dashboard({ stats, peminjamanTerbaru }: DashboardProps) 
                 {/* Section Transaksi & Quick Actions */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Tabel Transaksi Terbaru */}
-                    <div className="lg:col-span-2 bg-white dark:bg-[#111622] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 space-y-4">
+                    <div className="lg:col-span-2 bg-white dark:bg-[#111622] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-6 space-y-4">
                         <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
                             <div>
                                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -220,7 +230,7 @@ export default function Dashboard({ stats, peminjamanTerbaru }: DashboardProps) 
                     </div>
 
                     {/* Quick Action Panel */}
-                    <div className="bg-white dark:bg-[#111622] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 space-y-4">
+                    <div className="bg-white dark:bg-[#111622] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-6 space-y-4">
                         <h2 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-4">
                             Aksi Cepat Admin
                         </h2>
