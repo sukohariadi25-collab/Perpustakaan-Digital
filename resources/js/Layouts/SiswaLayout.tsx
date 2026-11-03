@@ -14,6 +14,7 @@ import {
     Inbox,
     User,
     Bell,
+    Clock,
 } from 'lucide-react';
 
 export default function SiswaLayout({ children }: { children: ReactNode }) {
@@ -95,6 +96,17 @@ export default function SiswaLayout({ children }: { children: ReactNode }) {
                                             }`}
                                         >
                                             Pesanan Saya
+                                        </Link>
+                                        {/* Menu Baru: Riwayat Peminjaman & Denda */}
+                                        <Link
+                                            href="/siswa/riwayat-peminjaman"
+                                            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
+                                                url.startsWith('/siswa/riwayat-peminjaman')
+                                                    ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-semibold'
+                                                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                                            }`}
+                                        >
+                                            Riwayat Pinjam
                                         </Link>
                                     </>
                                 )}
@@ -237,6 +249,17 @@ export default function SiswaLayout({ children }: { children: ReactNode }) {
                                         }`}
                                     >
                                         <Inbox className="w-4 h-4" /> Pesanan Saya
+                                    </Link>
+                                    {/* Menu Mobile Riwayat Pinjam */}
+                                    <Link
+                                        href="/siswa/riwayat-peminjaman"
+                                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                                            url.startsWith('/siswa/riwayat-peminjaman')
+                                                ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-semibold'
+                                                : 'text-slate-600 dark:text-slate-400'
+                                        }`}
+                                    >
+                                        <Clock className="w-4 h-4" /> Riwayat Pinjam & Denda
                                     </Link>
                                     <Link
                                         href="/notifications"

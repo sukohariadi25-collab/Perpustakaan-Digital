@@ -107,9 +107,9 @@ export default function NotificationBell() {
                 )}
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Dropdown Menu (Diatur agar posisinya menyesuaikan layar HP tanpa terpotong) */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#111622] rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 z-50 overflow-hidden">
+                <div className="absolute right-[-40px] sm:right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#111622] rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 z-50 overflow-hidden">
                     {/* Header Dropdown */}
                     <div className="p-3.5 bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -134,7 +134,7 @@ export default function NotificationBell() {
                     </div>
 
                     {/* Daftar Notifikasi Belum Dibaca */}
-                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 custom-scrollbar">
                         {notifications.length > 0 ? (
                             notifications.map((item) => (
                                 <div

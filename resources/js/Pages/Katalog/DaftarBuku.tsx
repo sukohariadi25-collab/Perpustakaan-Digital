@@ -143,11 +143,11 @@ export default function DaftarBuku({ buku, kategoriList, kategori }: KatalogProp
                     </div>
                 )}
 
-                {/* Filter & Search Bar Responsif */}
-                <div className="bg-white dark:bg-[#111622] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-3 sm:space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                        {/* Input Cari */}
-                        <div className="md:col-span-6 relative">
+                {/* Filter & Search Bar yang Diperbaiki (Lebih Rapi & Proporsional) */}
+                <div className="bg-white dark:bg-[#111622] rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                        {/* Input Cari (Memakan porsi lebih besar) */}
+                        <div className="sm:col-span-7 relative">
                             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="text"
@@ -159,12 +159,12 @@ export default function DaftarBuku({ buku, kategoriList, kategori }: KatalogProp
                         </div>
 
                         {/* Dropdown Kategori */}
-                        <div className="md:col-span-3 relative">
+                        <div className="sm:col-span-5 relative">
                             <Layers className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                             <select
                                 value={selectedKategori}
                                 onChange={(e) => setSelectedKategori(e.target.value)}
-                                className="w-full pl-10 pr-8 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none cursor-pointer appearance-none"
+                                className="w-full pl-10 pr-8 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none cursor-pointer appearance-none truncate"
                             >
                                 <option value="semua">Semua Kategori</option>
                                 {listKategori.map((kat) => (
@@ -174,23 +174,27 @@ export default function DaftarBuku({ buku, kategoriList, kategori }: KatalogProp
                                 ))}
                             </select>
                         </div>
+                    </div>
 
-                        {/* Checkbox Filter Stok */}
-                        <div className="md:col-span-3 flex items-center justify-start md:justify-end pt-1 md:pt-0">
-                            <label className="inline-flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                <div
-                                    onClick={() => setOnlyAvailable(!onlyAvailable)}
-                                    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                                        onlyAvailable
-                                            ? 'bg-teal-600 border-teal-600 text-white'
-                                            : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
-                                    }`}
-                                >
-                                    {onlyAvailable && <Check className="w-3 h-3 stroke-[3]" />}
-                                </div>
-                                Hanya Stok Tersedia
-                            </label>
-                        </div>
+                    {/* Baris Bawah: Checkbox Filter Stok & Info Ringkas */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                        <label className="inline-flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            <div
+                                onClick={() => setOnlyAvailable(!onlyAvailable)}
+                                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                    onlyAvailable
+                                        ? 'bg-teal-600 border-teal-600 text-white'
+                                        : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
+                                }`}
+                            >
+                                {onlyAvailable && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            Hanya Stok Tersedia
+                        </label>
+
+                        <span className="text-[11px] text-slate-400 font-medium">
+                            Total: <strong className="text-slate-700 dark:text-slate-200">{filteredBuku.length}</strong> buku
+                        </span>
                     </div>
                 </div>
 

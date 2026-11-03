@@ -42,6 +42,7 @@ Route::middleware(['auth', 'verified', 'role:siswa'])->prefix('siswa')->name('si
     Route::get('/pesanan', [PemesananController::class, 'index'])->name('pesanan.index');
     Route::post('/pesanan', [PemesananController::class, 'store'])->name('pesanan.store');
     Route::delete('/pesanan/{id}/batalkan', [PemesananController::class, 'batalkanPesanan'])->name('pesanan.batalkan');
+    Route::get('/riwayat-peminjaman', [PeminjamanController::class, 'riwayatSiswa'])->name('peminjaman.riwayat');
 });
 
 /*
@@ -81,6 +82,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/peminjaman/transaksi', function () {
         return Inertia::render('Admin/Peminjaman/Transaksi');
     })->name('peminjaman.transaksi');
+    Route::get('/denda', [PeminjamanController::class, 'rekapDenda'])->name('denda.index');
+Route::post('/denda/{id}/lunasi', [PeminjamanController::class, 'lunasiDenda'])->name('denda.lunasi');
+Route::get('/denda/export', [PeminjamanController::class, 'exportDenda'])->name('denda.export');
 });
 
 /*

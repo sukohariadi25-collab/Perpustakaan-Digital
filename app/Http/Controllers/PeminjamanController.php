@@ -23,6 +23,20 @@ class PeminjamanController extends Controller
             ->get()
             ->map(function ($item) {
                 $tenggat = $item->tanggal_kembali ?? $item->tanggal_tenggat;
+                // Gunakan nilai absolut agar jika di database tersimpan negatif, tetap terbaca positif
+                $dendaFinal = abs($item->denda ?? 0);
+
+                if ($dendaFinal == 0 && $tenggat) {
+                    $tenggatCarbon = Carbon::parse($tenggat)->startOfDay();
+                    $acuanCarbon = $item->tanggal_pengembalian 
+                        ? Carbon::parse($item->tanggal_pengembalian)->startOfDay() 
+                        : Carbon::now()->startOfDay();
+
+                    if ($acuanCarbon->greaterThan($tenggatCarbon)) {
+                        $diffDays = (int) $acuanCarbon->diffInDays($tenggatCarbon);
+                        $dendaFinal = $diffDays * 1000;
+                    }
+                }
 
                 return [
                     'id'                   => $item->id,
@@ -36,7 +50,7 @@ class PeminjamanController extends Controller
                     'tanggal_tenggat'      => $tenggat,
                     'tanggal_pengembalian' => $item->tanggal_pengembalian,
                     'status'               => $item->status,
-                    'denda'                => $item->denda,
+                    'denda'                => $dendaFinal,
                 ];
             });
 
@@ -46,21 +60,31 @@ class PeminjamanController extends Controller
             ],
         ]);
     }
-
-    public function store(Request $request)
+        public function store(Request $request)
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'buku_id' => 'required|exists:buku,id',
         ]);
 
-        $peminjaman = Peminjaman::create([
-            'user_id'         => $request->user_id,
-            'buku_id'         => $request->buku_id,
-            'tanggal_pinjam'  => now()->toDateString(),
-            'tanggal_kembali' => now()->addDays(7)->toDateString(),
-            'status'          => 'dipinjam',
-        ]);
+        DB::transaction(function () use ($request, &$peminjaman) {
+            $buku = Buku::lockForUpdate()->findOrFail($request->buku_id);
+
+            if (($buku->stok_tersedia ?? $buku->stok ?? 0) <= 0) {
+                throw new \Exception('Maaf, stok buku ini sudah habis.');
+            }
+
+            $peminjaman = Peminjaman::create([
+                'user_id'         => $request->user_id,
+                'buku_id'         => $request->buku_id,
+                'tanggal_pinjam'  => now()->toDateString(),
+                'tanggal_kembali' => now()->addDays(7)->toDateString(),
+                'status'          => 'dipinjam',
+            ]);
+
+            // Kurangi stok buku saat peminjaman manual dibuat
+            $this->kurangiStokBuku($buku->id);
+        });
 
         $user = User::find($request->user_id);
         $buku = Buku::find($request->buku_id);
@@ -86,7 +110,7 @@ class PeminjamanController extends Controller
             ));
         }
 
-        return redirect()->back()->with('success', 'Peminjaman manual berhasil dibuat.');
+        return redirect()->back()->with('success', 'Peminjaman manual berhasil dibuat dan stok dikurangi.');
     }
 
     public function approve(Peminjaman $peminjaman)
@@ -174,6 +198,7 @@ class PeminjamanController extends Controller
                 'kondisi_kembali'      => $request->kondisi_kembali,
             ]);
 
+            // Stok dikembalikan jika kondisi buku Bagus atau Rusak (hanya tidak dikembalikan jika Hilang)
             if ($request->kondisi_kembali !== 'hilang') {
                 $this->tambahStokBuku($peminjaman->buku_id);
             }
@@ -248,10 +273,10 @@ class PeminjamanController extends Controller
         $buku = Buku::find($bukuId);
         if (!$buku) return;
 
-        if (Schema::hasColumn('bukus', 'stok_tersedia')) {
+        if (Schema::hasColumn('buku', 'stok_tersedia')) {
             $buku->increment('stok_tersedia');
         }
-        if (Schema::hasColumn('bukus', 'stok')) {
+        if (Schema::hasColumn('buku', 'stok')) {
             $buku->increment('stok');
         }
     }
@@ -261,10 +286,10 @@ class PeminjamanController extends Controller
         $buku = Buku::find($bukuId);
         if (!$buku) return;
 
-        if (Schema::hasColumn('bukus', 'stok_tersedia')) {
+        if (Schema::hasColumn('buku', 'stok_tersedia')) {
             $buku->decrement('stok_tersedia');
         }
-        if (Schema::hasColumn('bukus', 'stok')) {
+        if (Schema::hasColumn('buku', 'stok')) {
             $buku->decrement('stok');
         }
     }
@@ -282,4 +307,126 @@ class PeminjamanController extends Controller
 
         return $pdf->stream('laporan-seluruh-peminjaman-' . date('Y-m-d') . '.pdf');
     }
+
+    public function riwayatSiswa()
+    {
+        $peminjaman = Peminjaman::with(['user', 'buku'])
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                $tenggat = $item->tanggal_kembali ?? $item->tanggal_tenggat;
+                // Gunakan nilai absolut agar jika di database tersimpan negatif, tetap terbaca positif
+                $dendaFinal = abs($item->denda ?? 0);
+
+                if ($dendaFinal == 0 && $tenggat) {
+                    $tenggatCarbon = Carbon::parse($tenggat)->startOfDay();
+                    $acuanCarbon = $item->tanggal_pengembalian 
+                        ? Carbon::parse($item->tanggal_pengembalian)->startOfDay() 
+                        : Carbon::now()->startOfDay();
+
+                    if ($acuanCarbon->greaterThan($tenggatCarbon)) {
+                        $diffDays = (int) $acuanCarbon->diffInDays($tenggatCarbon);
+                        $dendaFinal = $diffDays * 1000;
+                    }
+                }
+
+                return [
+                    'id'                   => $item->id,
+                    'buku'                 => $item->buku,
+                    'tanggal_pinjam'       => $item->tanggal_pinjam,
+                    'tanggal_kembali'      => $tenggat,
+                    'tanggal_pengembalian' => $item->tanggal_pengembalian,
+                    'status'               => $item->status,
+                    'denda'                => $dendaFinal,
+                ];
+            });
+
+        return Inertia::render('Siswa/RiwayatPeminjaman', [
+            'peminjaman' => $peminjaman,
+        ]);
+    }
+   public function rekapDenda(Request $request)
+    {
+        $peminjaman = Peminjaman::with(['user', 'buku'])
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                $tenggat = $item->tanggal_kembali ?? $item->tanggal_tenggat;
+                $dendaFinal = abs($item->denda ?? 0); // Ambil nilai mutlak (positif)
+
+                if ($dendaFinal == 0 && $tenggat) {
+                    $tenggatCarbon = Carbon::parse($tenggat)->startOfDay();
+                    $acuanCarbon = $item->tanggal_pengembalian 
+                        ? Carbon::parse($item->tanggal_pengembalian)->startOfDay() 
+                        : Carbon::now()->startOfDay();
+
+                    if ($acuanCarbon->greaterThan($tenggatCarbon)) {
+                        $diffDays = (int) $acuanCarbon->diffInDays($tenggatCarbon);
+                        $dendaFinal = $diffDays * 1000;
+                    }
+                }
+
+                return [
+                    'id'                   => $item->id,
+                    'nama_siswa'           => $item->user->name ?? 'N/A',
+                    'judul_buku'           => $item->buku->judul ?? 'N/A',
+                    'tanggal_pinjam'       => $item->tanggal_pinjam,
+                    'batas_kembali'        => $tenggat,
+                    'tanggal_pengembalian' => $item->tanggal_pengembalian,
+                    'status'               => $item->status,
+                    'denda'                => $dendaFinal,
+                ];
+            })
+            // Filter memastikan hanya mengambil denda > 0 atau status terlambat
+            ->filter(function ($item) {
+                return $item['denda'] > 0 || strtolower($item['status']) === 'terlambat';
+            })
+            ->values();
+
+        return Inertia::render('Admin/Denda/Index', [
+            'peminjamanDenda' => $peminjaman,
+        ]);
+    }
+   public function exportDenda(Request $request)
+{
+    // Ambil semua data dengan relasi, lalu hitung dan filter via collection
+    $peminjamanList = Peminjaman::with(['user', 'buku'])
+        ->latest()
+        ->get()
+        ->map(function ($item) {
+            $tenggat = $item->tanggal_kembali ?? $item->tanggal_tenggat;
+            $dendaFinal = abs($item->denda ?? 0);
+
+            // Hitung otomatis jika denda 0 tapi sudah lewat tenggat
+            if ($dendaFinal == 0 && $tenggat) {
+                $tenggatCarbon = Carbon::parse($tenggat)->startOfDay();
+                $acuanCarbon = $item->tanggal_pengembalian 
+                    ? Carbon::parse($item->tanggal_pengembalian)->startOfDay() 
+                    : Carbon::now()->startOfDay();
+
+                if ($acuanCarbon->greaterThan($tenggatCarbon)) {
+                    $diffDays = (int) $acuanCarbon->diffInDays($tenggatCarbon);
+                    $dendaFinal = $diffDays * 1000;
+                }
+            }
+
+            $item->denda_calculated = $dendaFinal;
+            return $item;
+        })
+        // Saring hanya yang memiliki denda > 0 atau status terlambat
+        ->filter(function ($item) {
+            return $item->denda_calculated > 0 || strtolower($item->status) === 'terlambat';
+        })
+        ->values();
+
+    $totalDendaTerkumpul = $peminjamanList->sum('denda_calculated');
+
+    $pdf = Pdf::loadView('pdf.rekap-denda', [
+        'peminjamanList'      => $peminjamanList,
+        'totalDendaTerkumpul' => $totalDendaTerkumpul,
+        'tanggal'             => date('d-m-Y'),
+    ])->setPaper('a4', 'landscape');
+
+    return $pdf->stream('laporan-rekapitulasi-denda-' . date('Y-m-d') . '.pdf');
+}
 }

@@ -109,52 +109,52 @@ export default function Dashboard({ peminjaman = [], pemesanan = [] }: Dashboard
                     <div className="absolute right-20 -top-10 w-48 h-48 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
                 </div>
 
-                {/* Grid Metric Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white dark:bg-[#111622] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 rounded-xl">
-                            <BookOpen className="w-6 h-6" />
+                {/* Grid Metric Cards (Diubah menjadi 2 kolom di mobile, tetap 4 kolom di layar besar) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="bg-white dark:bg-[#111622] p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3 sm:gap-4">
+                        <div className="p-2.5 sm:p-3 bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 rounded-xl shrink-0">
+                            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
-                        <div>
-                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Sedang Dipinjam</p>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-                                {pinjamAktif.length} <span className="text-xs font-normal text-slate-400">buku</span>
+                        <div className="min-w-0">
+                            <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">Sedang Dipinjam</p>
+                            <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mt-0.5 truncate">
+                                {pinjamAktif.length} <span className="text-[10px] sm:text-xs font-normal text-slate-400">buku</span>
                             </h3>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-[#111622] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
-                            <Clock className="w-6 h-6" />
+                    <div className="bg-white dark:bg-[#111622] p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3 sm:gap-4">
+                        <div className="p-2.5 sm:p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
+                            <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
-                        <div>
-                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Reservasi Pending</p>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-                                {pesananAktif.length} <span className="text-xs font-normal text-slate-400">tiket</span>
+                        <div className="min-w-0">
+                            <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">Reservasi Pending</p>
+                            <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mt-0.5 truncate">
+                                {pesananAktif.length} <span className="text-[10px] sm:text-xs font-normal text-slate-400">tiket</span>
                             </h3>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-[#111622] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
-                            <AlertCircle className="w-6 h-6" />
+                    <div className="bg-white dark:bg-[#111622] p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3 sm:gap-4">
+                        <div className="p-2.5 sm:p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl shrink-0">
+                            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
-                        <div>
-                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Mendekati Tenggat</p>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-                                {tenggatDekatCount} <span className="text-xs font-normal text-slate-400">buku</span>
+                        <div className="min-w-0">
+                            <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">Mendekati Tenggat</p>
+                            <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mt-0.5 truncate">
+                                {tenggatDekatCount} <span className="text-[10px] sm:text-xs font-normal text-slate-400">buku</span>
                             </h3>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-[#111622] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
-                            <CheckCircle2 className="w-6 h-6" />
+                    <div className="bg-white dark:bg-[#111622] p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3 sm:gap-4">
+                        <div className="p-2.5 sm:p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+                            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
-                        <div>
-                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Pernah Selesai</p>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-                                {riwayatSelesai.length} <span className="text-xs font-normal text-slate-400">kali</span>
+                        <div className="min-w-0">
+                            <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 truncate">Total Pernah Selesai</p>
+                            <h3 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mt-0.5 truncate">
+                                {riwayatSelesai.length} <span className="text-[10px] sm:text-xs font-normal text-slate-400">kali</span>
                             </h3>
                         </div>
                     </div>
