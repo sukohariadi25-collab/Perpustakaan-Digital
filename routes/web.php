@@ -59,8 +59,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/buku/export', [AdminBukuController::class, 'export'])->name('buku.export');
     Route::post('/buku/import', [AdminBukuController::class, 'import'])->name('buku.import');
     Route::post('/buku/bulk-sampul', [AdminBukuController::class, 'bulkUploadSampul'])->name('buku.bulk-sampul');
+    Route::get('/buku/bermasalah', [PeminjamanController::class, 'inventarisBermasalah'])->name('buku.bermasalah');
     Route::resource('buku', AdminBukuController::class);
-    
+    Route::resource('buku', AdminBukuController::class)->except(['show']);
+
     // Kelola Kategori
     Route::get('/kategori', [KategoriController::class, 'index'])->name('kategori.index');
     Route::post('/kategori', [KategoriController::class, 'store'])->name('kategori.store');
@@ -79,6 +81,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/peminjaman/{peminjaman}/approve', [PeminjamanController::class, 'approve'])->name('peminjaman.approve');
     Route::post('/peminjaman/{peminjaman}/reject', [PeminjamanController::class, 'reject'])->name('peminjaman.reject');
     Route::post('/peminjaman/{peminjaman}/kembali', [PeminjamanController::class, 'kembali'])->name('peminjaman.kembali');
+    Route::post('/peminjaman/{peminjaman}/selesai-perbaikan', [PeminjamanController::class, 'selesaiPerbaikan'])->name('peminjaman.selesai-perbaikan');
     Route::get('/peminjaman/transaksi', function () {
         return Inertia::render('Admin/Peminjaman/Transaksi');
     })->name('peminjaman.transaksi');

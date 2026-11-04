@@ -27,6 +27,14 @@ class AdminBukuController extends Controller
             'buku' => $buku,
         ]);
     }
+    public function show($id)
+    {
+        $buku = Buku::with(['kategori', 'salinan'])->findOrFail($id);
+
+        return Inertia::render('Admin/Buku/Detail', [
+            'buku' => $buku,
+        ]);
+    }
 
     public function create()
     {

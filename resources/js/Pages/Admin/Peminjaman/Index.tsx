@@ -26,7 +26,7 @@ export default function Index({ peminjaman }: IndexProps) {
     const returnForm = useForm({
         kondisi_kembali: 'bagus',
         denda_kondisi: 0,
-        denda_keterlambatan: 0, // Ditambahkan agar data terkirim ke backend jika dibutuhkan
+        denda_keterlambatan: 0,
         total_denda: 0,
     });
 
@@ -45,7 +45,6 @@ export default function Index({ peminjaman }: IndexProps) {
         return true;
     });
 
-    // Hitung jumlah data per kategori
     const countAktif = listData.filter((i) => ['dipinjam', 'terlambat'].includes(i.status?.toLowerCase())).length;
     const countRiwayat = listData.filter((i) => ['dikembalikan', 'selesai'].includes(i.status?.toLowerCase())).length;
 
@@ -58,10 +57,8 @@ export default function Index({ peminjaman }: IndexProps) {
         const tenggat = new Date(tenggatStr);
         const now = new Date();
 
-        // Validasi jika format tanggal tidak valid
         if (isNaN(tenggat.getTime())) return 0;
 
-        // Samakan jam ke 00:00 agar perhitungan selisih hari presisi
         tenggat.setHours(0, 0, 0, 0);
         now.setHours(0, 0, 0, 0);
 
@@ -96,13 +93,13 @@ export default function Index({ peminjaman }: IndexProps) {
         if (!selectedReturn) return;
 
         returnForm.post(`/admin/peminjaman/${selectedReturn.id}/kembali`, {
+            preserveScroll: true,
             onSuccess: () => {
                 handleCloseModal();
             },
         });
     };
 
-    // Handler untuk Export PDF
     const handleExportPdf = () => {
         window.open(`/admin/peminjaman/export?tab=${activeTab}`, '_blank');
     };
@@ -126,7 +123,6 @@ export default function Index({ peminjaman }: IndexProps) {
                         </p>
                     </div>
 
-                    {/* Tombol Aksi Header */}
                     <div className="flex items-center gap-2.5">
                         <button
                             type="button"
@@ -149,11 +145,10 @@ export default function Index({ peminjaman }: IndexProps) {
                 <div className="flex border-b border-slate-200/80 dark:border-slate-800 gap-2 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('aktif')}
-                        className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
-                            activeTab === 'aktif'
+                        className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${activeTab === 'aktif'
                                 ? 'text-teal-600 dark:text-teal-400 border-teal-500 font-bold'
                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border-transparent'
-                        }`}
+                            }`}
                     >
                         <Clock className="w-3.5 h-3.5" /> Peminjaman Aktif
                         <span className="px-2 py-0.5 text-[10px] rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border border-teal-500/20">
@@ -163,11 +158,10 @@ export default function Index({ peminjaman }: IndexProps) {
 
                     <button
                         onClick={() => setActiveTab('riwayat')}
-                        className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
-                            activeTab === 'riwayat'
+                        className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${activeTab === 'riwayat'
                                 ? 'text-teal-600 dark:text-teal-400 border-teal-500 font-bold'
                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border-transparent'
-                        }`}
+                            }`}
                     >
                         <CheckCircle2 className="w-3.5 h-3.5" /> Riwayat Selesai
                         <span className="px-2 py-0.5 text-[10px] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold border border-slate-200 dark:border-slate-700">
@@ -177,11 +171,10 @@ export default function Index({ peminjaman }: IndexProps) {
 
                     <button
                         onClick={() => setActiveTab('semua')}
-                        className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
-                            activeTab === 'semua'
+                        className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${activeTab === 'semua'
                                 ? 'text-teal-600 dark:text-teal-400 border-teal-500 font-bold'
                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border-transparent'
-                        }`}
+                            }`}
                     >
                         <Layers className="w-3.5 h-3.5" /> Semua Transaksi
                         <span className="px-2 py-0.5 text-[10px] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold border border-slate-200 dark:border-slate-700">
@@ -299,7 +292,8 @@ export default function Index({ peminjaman }: IndexProps) {
                                     className="w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none py-2 px-3"
                                 >
                                     <option value="bagus">Bagus / Normal</option>
-                                    <option value="rusak">Rusak</option>
+                                    <option value="rusak_ringan">Rusak Ringan</option>
+                                    <option value="rusak_berat">Rusak Berat </option>
                                     <option value="hilang">Hilang</option>
                                 </select>
                             </div>

@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { 
-    Coins, 
-    AlertCircle, 
-    CheckCircle2, 
-    FileDown, 
-    Inbox, 
-    Calendar,
+import {
+    Coins,
+    AlertCircle,
+    FileDown,
+    Inbox,
     Search
 } from 'lucide-react';
 
@@ -19,6 +17,7 @@ interface DendaItem {
     batas_kembali: string;
     tanggal_pengembalian?: string;
     status: string;
+    kondisi_kembali: string;
     denda: number;
 }
 
@@ -38,7 +37,7 @@ export default function Index({ peminjamanDenda = [] }: DendaIndexProps) {
         );
     });
 
-   // Kalkulasi Statistik Ringkas yang aman dari error TypeScript
+    // Kalkulasi Statistik Ringkas
     const totalDendaNominal = peminjamanDenda.reduce((acc: number, curr: DendaItem) => {
         return acc + (Number(curr.denda) || 0);
     }, 0);
@@ -126,7 +125,7 @@ export default function Index({ peminjamanDenda = [] }: DendaIndexProps) {
                                     <th className="p-4">Tgl Pinjam</th>
                                     <th className="p-4">Batas Kembali</th>
                                     <th className="p-4">Tgl Dikembalikan</th>
-                                    <th className="p-4">Status Buku</th>
+                                    <th className="p-4">Kondisi Buku</th>
                                     <th className="p-4">Nominal Denda</th>
                                 </tr>
                             </thead>
@@ -153,12 +152,13 @@ export default function Index({ peminjamanDenda = [] }: DendaIndexProps) {
                                                 {item.tanggal_pengembalian || '-'}
                                             </td>
                                             <td className="p-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                                                    item.status === 'terlambat'
-                                                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                                                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                                }`}>
-                                                    {item.status}
+                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${item.kondisi_kembali === 'rusak_ringan' || item.kondisi_kembali === 'rusak'
+                                                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                                        : item.kondisi_kembali === 'rusak_berat' || item.kondisi_kembali === 'hilang'
+                                                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                                                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                                    }`}>
+                                                    {item.kondisi_kembali ? item.kondisi_kembali.replace('_', ' ') : 'bagus'}
                                                 </span>
                                             </td>
                                             <td className="p-4 font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">

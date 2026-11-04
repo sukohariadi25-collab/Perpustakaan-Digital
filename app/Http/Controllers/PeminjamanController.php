@@ -168,14 +168,14 @@ class PeminjamanController extends Controller
         return back()->with('success', 'Pesanan berhasil ditolak.');
     }
 
-    public function kembali(Request $request, Peminjaman $peminjaman)
+   public function kembali(Request $request, Peminjaman $peminjaman)
     {
         if ($peminjaman->status === 'dikembalikan') {
             return back()->with('error', 'Buku ini sudah dikembalikan.');
         }
 
         $request->validate([
-            'kondisi_kembali' => 'required|in:bagus,rusak,hilang',
+            'kondisi_kembali' => 'required|in:bagus,rusak,rusak_ringan,rusak_berat,hilang',
             'denda_kondisi'   => 'nullable|numeric|min:0',
         ]);
 
@@ -191,31 +191,89 @@ class PeminjamanController extends Controller
         $totalDenda         = $dendaKeterlambatan + $dendaKondisi;
 
         DB::transaction(function () use ($peminjaman, $tanggalPengembalian, $totalDenda, $request) {
+            $kondisi = $request->kondisi_kembali;
+
             $peminjaman->update([
                 'status'               => 'dikembalikan',
                 'tanggal_pengembalian' => $tanggalPengembalian->toDateString(),
                 'denda'                => $totalDenda,
-                'kondisi_kembali'      => $request->kondisi_kembali,
+                'kondisi_kembali'      => $kondisi,
             ]);
 
-            // Stok dikembalikan jika kondisi buku Bagus atau Rusak (hanya tidak dikembalikan jika Hilang)
-            if ($request->kondisi_kembali !== 'hilang') {
-                $this->tambahStokBuku($peminjaman->buku_id);
+            $buku = Buku::lockForUpdate()->find($peminjaman->buku_id);
+
+            if ($buku) {
+                if ($kondisi === 'bagusan' || $kondisi === 'bagus') {
+                    $this->tambahStokBuku($buku->id);
+                } elseif ($kondisi === 'rusak' || $kondisi === 'rusak_ringan') {
+                    // Rusak Ringan masuk ke karantina perbaikan
+                    if (Schema::hasColumn('buku', 'stok_rusak')) {
+                        $buku->increment('stok_rusak');
+                    }
+                } elseif ($kondisi === 'rusak_berat' || $kondisi === 'hilang') {
+                    // Rusak Berat / Hilang mengurangi stok total secara permanen
+                    if (Schema::hasColumn('buku', 'stok')) {
+                        $buku->decrement('stok');
+                    }
+                    if (Schema::hasColumn('buku', 'stok_hilang')) {
+                        $buku->increment('stok_hilang');
+                    }
+                }
             }
         });
 
-        // Notifikasi ke Siswa: Buku Berhasil Dikembalikan
-        if ($peminjaman->user) {
-            $pesanDenda = $totalDenda > 0 ? " Total denda: Rp " . number_format($totalDenda, 0, ',', '.') : '';
-            $peminjaman->user->notify(new AppNotification(
-                'Pengembalian Buku Berhasil',
-                "Buku '{$peminjaman->buku->judul}' telah berhasil dikembalikan.{$pesanDenda}",
-                '/peminjaman',
-                $totalDenda > 0 ? 'warning' : 'success'
-            ));
+        return back()->with('success', 'Pengembalian berhasil diproses dan stok disesuaikan.');
+    }
+
+    // Method baru untuk menangani buku rusak ringan yang selesai diperbaiki
+    public function selesaiPerbaikan(Peminjaman $peminjaman)
+    {
+        if ($peminjaman->kondisi_kembali !== 'rusak_ringan') {
+            return back()->with('error', 'Buku ini bukan berstatus rusak ringan.');
         }
 
-        return back()->with('success', 'Buku berhasil dikembalikan dan stok diperbarui.');
+        DB::transaction(function () use ($peminjaman) {
+            $buku = Buku::lockForUpdate()->find($peminjaman->buku_id);
+
+            if ($buku) {
+                // Kurangi stok rusak karena sudah selesai diperbaiki
+                if (Schema::hasColumn('buku', 'stok_rusak') && $buku->stok_rusak > 0) {
+                    $buku->decrement('stok_rusak');
+                }
+                // Kembalikan stok ke rak
+                $this->tambahStokBuku($buku->id);
+
+                // Ubah status kondisi menjadi selesai diperbaiki / normal kembali
+                $peminjaman->update([
+                    'kondisi_kembali' => 'bagus' // atau status arsip selesai
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Buku berhasil diperbaiki dan dikembalikan ke stok rak.');
+    }
+
+    public function inventarisBermasalah()
+    {
+        $listBermasalah = Peminjaman::with(['user', 'buku'])
+            ->whereIn('kondisi_kembali', ['rusak', 'rusak_ringan', 'rusak_berat', 'hilang'])
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id'                   => $item->id,
+                    'nama_siswa'           => $item->user->name ?? 'N/A',
+                    'judul_buku'           => $item->buku->judul ?? 'N/A',
+                    'kode_buku'            => $item->buku->isbn ?? '-',
+                    'tanggal_pengembalian' => $item->tanggal_pengembalian,
+                    'kondisi'              => $item->kondisi_kembali,
+                    'denda'                => abs($item->denda ?? 0),
+                ];
+            });
+
+        return Inertia::render('Admin/Buku/InventarisBermasalah', [
+            'listBermasalah' => $listBermasalah,
+        ]);
     }
 
     public function processScan(Request $request)
@@ -345,14 +403,14 @@ class PeminjamanController extends Controller
             'peminjaman' => $peminjaman,
         ]);
     }
-   public function rekapDenda(Request $request)
+  public function rekapDenda(Request $request)
     {
         $peminjaman = Peminjaman::with(['user', 'buku'])
             ->latest()
             ->get()
             ->map(function ($item) {
                 $tenggat = $item->tanggal_kembali ?? $item->tanggal_tenggat;
-                $dendaFinal = abs($item->denda ?? 0); // Ambil nilai mutlak (positif)
+                $dendaFinal = abs($item->denda ?? 0);
 
                 if ($dendaFinal == 0 && $tenggat) {
                     $tenggatCarbon = Carbon::parse($tenggat)->startOfDay();
@@ -374,12 +432,14 @@ class PeminjamanController extends Controller
                     'batas_kembali'        => $tenggat,
                     'tanggal_pengembalian' => $item->tanggal_pengembalian,
                     'status'               => $item->status,
+                    'kondisi_kembali'      => $item->kondisi_kembali ?? 'bagus', 
                     'denda'                => $dendaFinal,
                 ];
             })
-            // Filter memastikan hanya mengambil denda > 0 atau status terlambat
             ->filter(function ($item) {
-                return $item['denda'] > 0 || strtolower($item['status']) === 'terlambat';
+                return $item['denda'] > 0 || 
+                       strtolower($item['status']) === 'terlambat' || 
+                       in_array($item['kondisi_kembali'], ['rusak', 'rusak_ringan', 'rusak_berat', 'hilang']);
             })
             ->values();
 
@@ -387,46 +447,48 @@ class PeminjamanController extends Controller
             'peminjamanDenda' => $peminjaman,
         ]);
     }
+    
    public function exportDenda(Request $request)
-{
-    // Ambil semua data dengan relasi, lalu hitung dan filter via collection
-    $peminjamanList = Peminjaman::with(['user', 'buku'])
-        ->latest()
-        ->get()
-        ->map(function ($item) {
-            $tenggat = $item->tanggal_kembali ?? $item->tanggal_tenggat;
-            $dendaFinal = abs($item->denda ?? 0);
+    {
+        // Ambil semua data dengan relasi, lalu hitung dan filter via collection
+        $peminjamanList = Peminjaman::with(['user', 'buku'])
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                $tenggat = $item->tanggal_kembali ?? $item->tanggal_tenggat;
+                $dendaFinal = abs($item->denda ?? 0);
 
-            // Hitung otomatis jika denda 0 tapi sudah lewat tenggat
-            if ($dendaFinal == 0 && $tenggat) {
-                $tenggatCarbon = Carbon::parse($tenggat)->startOfDay();
-                $acuanCarbon = $item->tanggal_pengembalian 
-                    ? Carbon::parse($item->tanggal_pengembalian)->startOfDay() 
-                    : Carbon::now()->startOfDay();
+                // Hitung otomatis jika denda 0 tapi sudah lewat tenggat
+                if ($dendaFinal == 0 && $tenggat) {
+                    $tenggatCarbon = Carbon::parse($tenggat)->startOfDay();
+                    $acuanCarbon = $item->tanggal_pengembalian 
+                        ? Carbon::parse($item->tanggal_pengembalian)->startOfDay() 
+                        : Carbon::now()->startOfDay();
 
-                if ($acuanCarbon->greaterThan($tenggatCarbon)) {
-                    $diffDays = (int) $acuanCarbon->diffInDays($tenggatCarbon);
-                    $dendaFinal = $diffDays * 1000;
+                    if ($acuanCarbon->greaterThan($tenggatCarbon)) {
+                        $diffDays = (int) $acuanCarbon->diffInDays($tenggatCarbon);
+                        $dendaFinal = $diffDays * 1000;
+                    }
                 }
-            }
 
-            $item->denda_calculated = $dendaFinal;
-            return $item;
-        })
-        // Saring hanya yang memiliki denda > 0 atau status terlambat
-        ->filter(function ($item) {
-            return $item->denda_calculated > 0 || strtolower($item->status) === 'terlambat';
-        })
-        ->values();
+                $item->denda_calculated = $dendaFinal;
+                $item->kondisi_kembali_label = $item->kondisi_kembali ?? 'bagus';
+                return $item;
+            })
+            // Saring hanya yang memiliki denda > 0 atau status terlambat
+            ->filter(function ($item) {
+                return $item->denda_calculated > 0 || strtolower($item->status) === 'terlambat';
+            })
+            ->values();
 
-    $totalDendaTerkumpul = $peminjamanList->sum('denda_calculated');
+        $totalDendaTerkumpul = $peminjamanList->sum('denda_calculated');
 
-    $pdf = Pdf::loadView('pdf.rekap-denda', [
-        'peminjamanList'      => $peminjamanList,
-        'totalDendaTerkumpul' => $totalDendaTerkumpul,
-        'tanggal'             => date('d-m-Y'),
-    ])->setPaper('a4', 'landscape');
+        $pdf = Pdf::loadView('pdf.rekap-denda', [
+            'peminjamanList'      => $peminjamanList,
+            'totalDendaTerkumpul' => $totalDendaTerkumpul,
+            'tanggal'             => date('d-m-Y'),
+        ])->setPaper('a4', 'landscape');
 
-    return $pdf->stream('laporan-rekapitulasi-denda-' . date('Y-m-d') . '.pdf');
-}
+        return $pdf->stream('laporan-rekapitulasi-denda-' . date('Y-m-d') . '.pdf');
+    }
 }

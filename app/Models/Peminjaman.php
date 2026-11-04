@@ -20,6 +20,7 @@ class Peminjaman extends Model
         'tanggal_tenggat',
         'status',
         'denda',
+        'kondisi_kembali',
     ];
 
     // Relasi ke model Buku

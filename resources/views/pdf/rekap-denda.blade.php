@@ -22,7 +22,7 @@
 <body>
 
     <div class="header">
-        <h2>Laporan Rekapitulasi Denda Keterlambatan</h2>
+        <h2>Laporan Rekapitulasi Denda Keterlambatan & Kerusakan</h2>
         <p>Perpustakaan Digital AksaraNet • Dicetak pada: {{ $tanggal }}</p>
     </div>
 
@@ -30,12 +30,12 @@
         <thead>
             <tr>
                 <th class="text-center" width="5%">No</th>
-                <th width="22%">Nama Siswa</th>
-                <th width="25%">Judul Buku</th>
-                <th class="text-center" width="12%">Batas Kembali</th>
-                <th class="text-center" width="12%">Tgl Dikembalikan</th>
-                <th class="text-center" width="12%">Status</th>
-                <th class="text-right" width="12%">Nominal Denda</th>
+                <th width="20%">Nama Siswa</th>
+                <th width="22%">Judul Buku</th>
+                <th class="text-center" width="11%">Batas Kembali</th>
+                <th class="text-center" width="11%">Tgl Dikembalikan</th>
+                <th class="text-center" width="11%">Kondisi Buku</th>
+                <th class="text-right" width="20%">Nominal Denda</th>
             </tr>
         </thead>
         <tbody>
@@ -46,7 +46,7 @@
                     <td>{{ $item->buku->judul ?? $item->judul_buku ?? '-' }}</td>
                     <td class="text-center">{{ $item->tanggal_kembali ?? $item->tanggal_tenggat ?? '-' }}</td>
                     <td class="text-center">{{ $item->tanggal_pengembalian ?? '-' }}</td>
-                    <td class="text-center" style="text-transform: uppercase;">{{ $item->status ?? '-' }}</td>
+                    <td class="text-center" style="text-transform: uppercase;">{{ $item->kondisi_kembali_label }}</td>
                     <td class="text-right" style="font-weight: bold;">
                         {{ $item->denda_calculated > 0 ? 'Rp ' . number_format($item->denda_calculated, 0, ',', '.') : '-' }}
                     </td>

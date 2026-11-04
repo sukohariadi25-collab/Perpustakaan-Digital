@@ -19,7 +19,8 @@ import {
     Bell,
     Sparkles,
     ChevronDown,
-    Coins, // <-- 1. Import ikon Coins untuk menu Denda
+    Coins, 
+    BookX,
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -70,6 +71,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 { name: 'Kelola Buku', href: '/admin/buku', icon: BookOpen },
                 { name: 'Kategori', href: '/admin/kategori', icon: Tag },
                 { name: 'Pemesanan', href: '/admin/pemesanan', icon: Inbox },
+                { name: 'Buku Rusak / Hilang', href: '/admin/buku/bermasalah', icon: BookX },
             ],
         },
         {
