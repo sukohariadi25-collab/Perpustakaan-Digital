@@ -10,9 +10,9 @@ class SiswaDashboardController extends Controller
 {
     public function index()
     {
+        // Ambil SEMUA data peminjaman milik siswa yang sedang login tanpa membatasi statusnya
         $peminjaman = Peminjaman::with('buku')
             ->where('user_id', auth()->id())
-            ->whereIn('status', ['dipinjam', 'terlambat'])
             ->latest()
             ->get();
 

@@ -21,7 +21,10 @@ class AdminDashboardController extends Controller
             'jumlah_terlambat' => Peminjaman::where('status', 'dipinjam')
                                     ->where('tanggal_tenggat', '<', Carbon::now())
                                     ->count(),
-            'total_denda'      => (int) Peminjaman::where('status', 'dikembalikan')->sum('denda'),
+            // Perbaikan: Akumulasikan denda dari status dikembalikan/selesai atau yang memiliki nominal denda
+            'total_denda'      => (int) Peminjaman::whereIn('status', ['dikembalikan', 'selesai'])
+                                    ->orWhere('denda', '>', 0)
+                                    ->sum('denda'),
         ];
 
         $peminjamanTerbaru = Peminjaman::with(['user', 'buku'])
@@ -30,7 +33,7 @@ class AdminDashboardController extends Controller
             ->get();
 
         return Inertia::render('Admin/DashboardAdmin', [
-            'stats'              => $stats,
+            'stats'             => $stats,
             'peminjamanTerbaru' => $peminjamanTerbaru,
         ]);
     }
